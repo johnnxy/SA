@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>9-Pillar Stock Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0F;
+    --card:#1A1A2E;
+    --card-glass:rgba(26,26,46,0.8);
+    --text:#FFFFFF;
+    --text-secondary:#B0B0C8;
+    --bull:#00C853;
+    --bear:#FF1744;
+    --neutral:#FFAB00;
+    --accent:#4488FF;
+    --warning:#FF6D00;
+    --border:#2A2A40;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(68,136,255,0.08), transparent),
+      radial-gradient(1200px 600px at 90% 0%, rgba(0,200,83,0.06), transparent),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    line-height:1.5;
+    min-height:100vh;
+    padding-bottom:60px;
+  }
+  .wrap{max-width:1200px; margin:0 auto; padding:0 20px;}
+
+  /* Header */
+  header{
+    position:sticky; top:0; z-index:50;
+    background:rgba(10,10,15,0.85);
+    backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+    padding:16px 0;
+  }
+  .header-row{display:flex; align-items:center; gap:20px; flex-wrap:wrap;}
+  .logo{
+    font-size:20px; font-weight:700; letter-spacing:-0.02em;
+    display:flex; align-items:center; gap:8px;
+  }
+  .logo .dot{width:8px;height:8px;border-radius:50%;background:var(--bull); box-shadow:0 0 12px var(--bull);}
+  .ticker-form{display:flex; gap:8px; flex:1; min-width:240px; max-width:420px;}
+  .ticker-form input{
+    flex:1; background:var(--card); border:1px solid var(--border); color:var(--text);
+    padding:10px 14px; border-radius:8px; font-family:'JetBrains Mono', monospace;
+    font-size:14px; text-transform:uppercase; letter-spacing:0.05em;
+  }
+  .ticker-form input:focus{outline:none; border-color:var(--accent);}
+  .btn{
+    background:var(--accent); color:#fff; border:none; padding:10px 20px;
+    border-radius:8px; font-weight:600; font-size:14px; cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .btn:hover{transform:translateY(-1px); box-shadow:0 6px 18px rgba(68,136,255,0.35);}
+  .btn:active{transform:translateY(0);}
+  .quick-stats{display:flex; gap:22px; margin-left:auto; flex-wrap:wrap;}
+  .quick-stat{text-align:right;}
+  .quick-stat .label{font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;}
+  .quick-stat .value{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:16px;}
+  .up{color:var(--bull);}
+  .down{color:var(--bear);}
+
+  main{padding-top:28px;}
+  section{margin-bottom:28px;}
+  .section-title{
+    font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.12em;
+    color:var(--text-secondary); margin-bottom:12px; display:flex; align-items:center; gap:10px;
+  }
+  .section-title::after{content:''; flex:1; height:1px; background:var(--border);}
+
+  .card{
+    background:var(--card-glass);
+    border:1px solid rgba(255,255,255,0.08);
+    backdrop-filter:blur(20px);
+    border-radius:12px;
+    padding:20px;
+  }
+
+  /* Executive summary */
+  .exec-grid{display:grid; grid-template-columns:1.3fr 1fr; gap:16px;}
+  .verdict-card{display:flex; flex-direction:column; gap:14px;}
+  .verdict-top{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  .verdict-badge{
+    display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:999px;
+    font-weight:700; font-size:14px; letter-spacing:0.03em;
+  }
+  .badge-wait{background:rgba(255,171,0,0.15); color:var(--neutral); border:1px solid rgba(255,171,0,0.4);}
+  .badge-buy{background:rgba(0,200,83,0.15); color:var(--bull); border:1px solid rgba(0,200,83,0.4);}
+  .badge-sell{background:rgba(255,23,68,0.15); color:var(--bear); border:1px solid rgba(255,23,68,0.4);}
+  .company-name{font-size:28px; font-weight:700; letter-spacing:-0.02em;}
+  .company-sub{color:var(--text-secondary); font-size:13px; margin-top:2px;}
+  .price-row{display:flex; align-items:baseline; gap:12px; font-family:'JetBrains Mono', monospace;}
+  .price-row .price{font-size:32px; font-weight:700;}
+  .fv-strip{display:flex; gap:24px; flex-wrap:wrap; padding-top:10px; border-top:1px solid var(--border);}
+  .fv-item .label{font-size:11px; color:var(--text-secondary); text-transform:uppercase;}
+  .fv-item .value{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:16px; margin-top:2px;}
+  .thesis{font-size:13px; color:var(--text-secondary); line-height:1.6;}
+
+  .mini-metrics{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .mini-metric{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:8px; padding:12px;}
+  .mini-metric .label{font-size:11px; color:var(--text-secondary); text-transform:uppercase;}
+  .mini-metric .value{font-family:'JetBrains Mono', monospace; font-weight:700; font-size:18px; margin-top:4px;}
+
+  /* Risk/Reward barometer */
+  .rr-grid{display:grid; grid-template-columns:1.4fr 1fr; gap:16px;}
+  .rr-bar-wrap{position:relative; height:56px; margin:22px 0 8px;}
+  .rr-track{position:relative; height:14px; border-radius:999px; background:linear-gradient(90deg, var(--bear), var(--neutral) 45%, var(--bull));}
+  .rr-marker{position:absolute; top:-26px; transform:translateX(-50%); text-align:center; font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700;}
+  .rr-marker .line{width:2px; height:22px; background:var(--text); margin:4px auto 0;}
+  .rr-labels{display:flex; justify-content:space-between; font-size:11px; color:var(--text-secondary); margin-top:14px;}
+  .rr-summary{display:flex; gap:24px; margin-top:16px; flex-wrap:wrap;}
+  .rr-summary .item .label{font-size:11px; color:var(--text-secondary); text-transform:uppercase;}
+  .rr-summary .item .value{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:18px;}
+
+  .gauge-box{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;}
+  .gauge-label{font-size:11px; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.05em;}
+  .gauge-value{font-family:'JetBrains Mono',monospace; font-weight:700; font-size:22px;}
+
+  /* Pillars */
+  .pillar{
+    border:1px solid rgba(255,255,255,0.08);
+    background:var(--card-glass);
+    backdrop-filter:blur(20px);
+    border-radius:12px;
+    margin-bottom:10px;
+    overflow:hidden;
+  }
+  .pillar-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; cursor:pointer; user-select:none;
+    transition:background .15s ease;
+  }
+  .pillar-head:hover{background:rgba(255,255,255,0.03);}
+  .pillar-head-left{display:flex; align-items:center; gap:14px;}
+  .pillar-num{
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12px;
+    color:var(--accent); background:rgba(68,136,255,0.12); border-radius:6px;
+    width:28px; height:28px; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .pillar-title{font-size:16px; font-weight:600;}
+  .pillar-verdict-chip{font-size:11px; color:var(--text-secondary); margin-top:2px;}
+  .chevron{transition:transform .25s ease; color:var(--text-secondary); flex-shrink:0;}
+  .pillar.open .chevron{transform:rotate(180deg);}
+  .pillar-body{
+    max-height:0; overflow:hidden; transition:max-height .35s ease;
+    border-top:1px solid transparent;
+  }
+  .pillar.open .pillar-body{border-top:1px solid var(--border);}
+  .pillar-body-inner{padding:20px;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .sub-card{background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:14px;}
+  .sub-card h4{font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary); margin-bottom:10px;}
+
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  th{text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.04em; color:var(--text-secondary); padding:8px 10px; border-bottom:1px solid var(--border);}
+  td{padding:9px 10px; border-bottom:1px solid rgba(255,255,255,0.04);}
+  tbody tr{transition:background .15s ease; cursor:default;}
+  tbody tr:nth-child(even){background:rgba(255,255,255,0.02);}
+  tbody tr:hover{background:rgba(68,136,255,0.08);}
+
+  .badge{display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:700;}
+  .badge-green{background:rgba(0,200,83,0.15); color:var(--bull);}
+  .badge-red{background:rgba(255,23,68,0.15); color:var(--bear);}
+  .badge-amber{background:rgba(255,171,0,0.15); color:var(--neutral);}
+  .badge-blue{background:rgba(68,136,255,0.15); color:var(--accent);}
+
+  .checklist{list-style:none; display:flex; flex-direction:column; gap:8px; font-size:13px;}
+  .checklist li{display:flex; gap:8px; align-items:flex-start;}
+  .checklist .tick{color:var(--bull); flex-shrink:0;}
+
+  .progress-row{margin-bottom:12px;}
+  .progress-row .plabel{display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px; color:var(--text-secondary);}
+  .progress-track{height:8px; background:rgba(255,255,255,0.06); border-radius:999px; overflow:hidden;}
+  .progress-fill{height:100%; border-radius:999px; width:0; transition:width 1s cubic-bezier(.16,1,.3,1);}
+
+  .verdict-line{
+    margin-top:16px; padding:12px 16px; border-radius:8px; font-size:13px; font-weight:600;
+    background:rgba(255,255,255,0.03); border-left:3px solid var(--accent);
+  }
+
+  .tooltip{position:relative; border-bottom:1px dashed var(--text-secondary); cursor:help;}
+  .tooltip .tip{
+    position:absolute; bottom:120%; left:50%; transform:translateX(-50%);
+    background:#0d0d18; border:1px solid var(--border); color:var(--text-secondary);
+    font-size:11px; font-weight:400; padding:8px 10px; border-radius:6px; width:200px;
+    opacity:0; pointer-events:none; transition:opacity .15s ease; z-index:20; line-height:1.4;
+  }
+  .tooltip:hover .tip{opacity:1;}
+
+  /* eps chart */
+  .eps-chart{display:flex; align-items:flex-end; gap:10px; height:140px; padding-top:10px;}
+  .eps-bar-col{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end;}
+  .eps-bar{width:100%; border-radius:4px 4px 0 0; background:linear-gradient(180deg, var(--accent), rgba(68,136,255,0.3)); position:relative;}
+  .eps-bar .val{position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--text-secondary); white-space:nowrap;}
+  .eps-bar-label{font-size:10px; color:var(--text-secondary); text-align:center;}
+
+  /* timeline */
+  .timeline{display:flex; flex-direction:column; gap:0;}
+  .timeline-item{display:flex; gap:14px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.04);}
+  .timeline-item:last-child{border-bottom:none;}
+  .timeline-date{font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-secondary); width:100px; flex-shrink:0;}
+  .timeline-content .event{font-size:13px; font-weight:600;}
+  .timeline-content .impact{font-size:12px; color:var(--text-secondary); margin-top:2px;}
+
+  /* ecosystem map */
+  .ecosystem-svg{width:100%; height:auto;}
+
+  /* Action panel */
+  .action-grid{display:grid; grid-template-columns:1fr 1.4fr; gap:16px;}
+  .action-list{list-style:none; display:flex; flex-direction:column; gap:12px;}
+  .action-list li{display:flex; gap:10px; align-items:flex-start; font-size:13px;}
+  .action-list .pin{flex-shrink:0; margin-top:1px;}
+  .action-list .action-label{font-weight:700; display:block; margin-bottom:2px; font-size:11px; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-secondary);}
+  .watch-list{list-style:none; display:flex; flex-direction:column; gap:10px; font-size:13px;}
+  .watch-list li{display:flex; gap:10px;}
+  .watch-num{
+    width:20px; height:20px; border-radius:50%; background:rgba(68,136,255,0.15); color:var(--accent);
+    display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0;
+  }
+
+  footer{text-align:center; color:var(--text-secondary); font-size:11px; padding:24px 0 0;}
+
+  .export-btn{
+    background:transparent; border:1px solid var(--border); color:var(--text-secondary);
+    padding:8px 16px; border-radius:8px; font-size:12px; cursor:pointer; transition:all .15s ease;
+  }
+  .export-btn:hover{border-color:var(--accent); color:var(--accent);}
+  .panel-actions{display:flex; justify-content:flex-end; gap:10px; margin-bottom:10px;}
+
+  @media (max-width: 1024px){
+    .exec-grid, .rr-grid, .grid2, .action-grid{grid-template-columns:1fr;}
+    .quick-stats{margin-left:0;}
+  }
+  @media (max-width: 768px){
+    .company-name{font-size:22px;}
+    .price-row .price{font-size:26px;}
+    .mini-metrics{grid-template-columns:1fr 1fr;}
+    body{font-size:14px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-row">
+    <div class="logo"><span class="dot"></span>PILLAR9</div>
+    <form class="ticker-form" id="tickerForm">
+      <input type="text" id="tickerInput" value="SBUX" maxlength="6" placeholder="Ticker e.g. SBUX">
+      <button class="btn" type="submit">Analyze</button>
+    </form>
+    <div class="quick-stats" id="quickStats"></div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <div class="section-title">Executive Summary</div>
+    <div class="exec-grid">
+      <div class="card verdict-card">
+        <div class="verdict-top">
+          <div>
+            <div class="company-name">Starbucks Corp <span style="color:var(--text-secondary); font-weight:400; font-size:16px;">SBUX</span></div>
+            <div class="company-sub">Consumer Discretionary · Restaurants · Data as of Jul 22, 2026 close</div>
+          </div>
+          <span class="verdict-badge badge-wait">⏳ WAIT</span>
+        </div>
+        <div class="price-row">
+          <span class="price">$103.98</span>
+          <span class="up">▲ +23.8% YTD</span>
+        </div>
+        <div class="fv-strip">
+          <div class="fv-item"><div class="label">Fair Value</div><div class="value">$99–100</div></div>
+          <div class="fv-item"><div class="label">vs Current</div><div class="value" style="color:var(--bear);">-4% overvalued</div></div>
+          <div class="fv-item"><div class="label">Risk / Reward</div><div class="value" style="color:var(--neutral);">1 : 2.5</div></div>
+          <div class="fv-item"><div class="label">Expected Return</div><div class="value" style="color:var(--bear);">-3%</div></div>
+        </div>
+        <p class="thesis">SBUX is a wide-moat, A-grade business executing a real turnaround under CEO Brian Niccol, and is currently the lone winner in a restaurant industry down double digits over six months. But the tape has run ahead of the fundamentals: shares sit near 52-week highs on a 79x trailing P/E, leaving an unfavorable risk/reward into the July 29 earnings print. The thesis is sound; the entry price is not.</p>
+      </div>
+      <div class="card">
+        <div class="mini-metrics">
+          <div class="mini-metric"><div class="label">Market Cap</div><div class="value">$118.5B</div></div>
+          <div class="mini-metric"><div class="label">52W Range</div><div class="value" style="font-size:14px;">$77.99–$109.23</div></div>
+          <div class="mini-metric"><div class="label tooltip">Trailing P/E<span class="tip">Price divided by trailing twelve months earnings per share.</span></div><div class="value">79.98x</div></div>
+          <div class="mini-metric"><div class="label">Forward P/E</div><div class="value">~38x</div></div>
+          <div class="mini-metric"><div class="label">Dividend Yield</div><div class="value">2.39%</div></div>
+          <div class="mini-metric"><div class="label tooltip">Beta<span class="tip">Volatility relative to the overall market. 1.0 = moves in line with the market.</span></div><div class="value">0.97</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">Risk / Reward Barometer</div>
+    <div class="card">
+      <div class="rr-grid">
+        <div>
+          <div class="rr-bar-wrap">
+            <div class="rr-marker" style="left:8%;">$80<div class="line" style="background:var(--bear);"></div></div>
+            <div class="rr-marker" style="left:40%;">$100<div class="line" style="background:var(--neutral);"></div></div>
+            <div class="rr-marker" style="left:52%;">$104<div class="line" style="background:var(--text);"></div></div>
+            <div class="rr-marker" style="left:92%;">$125<div class="line" style="background:var(--bull);"></div></div>
+            <div class="rr-track"></div>
+          </div>
+          <div class="rr-labels"><span>BEAR -24%</span><span>BASE -4%</span><span>CURRENT</span><span>BULL +20%</span></div>
+          <div class="rr-summary">
+            <div class="item"><div class="label">Risk / Reward</div><div class="value" style="color:var(--neutral);">1 : 2.5 — Unfavorable</div></div>
+            <div class="item"><div class="label">Expected Return</div><div class="value" style="color:var(--bear);">-3%</div></div>
+          </div>
+        </div>
+        <div class="gauge-box">
+          <svg width="180" height="110" viewBox="0 0 180 110">
+            <path d="M20,100 A70,70 0 0,1 160,100" fill="none" stroke="var(--border)" stroke-width="16" stroke-linecap="round"/>
+            <path id="rrGaugeArc" d="M20,100 A70,70 0 0,1 160,100" fill="none" stroke="var(--neutral)" stroke-width="16" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="220"/>
+          </svg>
+          <div class="gauge-value" style="color:var(--neutral);">WAIT</div>
+          <div class="gauge-label">Composite Signal</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">9-Pillar Institutional Analysis</div>
+    <div id="pillars"></div>
+  </section>
+
+  <section>
+    <div class="section-title">Action Panel</div>
+    <div class="card">
+      <div class="panel-actions">
+        <button class="export-btn" id="exportBtn">↓ Export Report</button>
+      </div>
+      <div class="action-grid">
+        <ul class="action-list">
+          <li><div><span class="action-label">📌 Trigger to Buy</span>Q3 EPS &gt; $0.70 AND stock pulls back to $95</div></li>
+          <li><div><span class="action-label">📌 Position Sizing</span>3% starter at $95, add to 5% at $90</div></li>
+          <li><div><span class="action-label">📌 Stop-Loss</span>$83 (below 200-day MA)</div></li>
+          <li><div><span class="action-label">📌 Thesis Invalidation</span>U.S. comp sales &lt;5% OR guidance cut</div></li>
+        </ul>
+        <div>
+          <h4 style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:var(--text-secondary); margin-bottom:12px;">What to Watch — July 29 Earnings</h4>
+          <ul class="watch-list">
+            <li><span class="watch-num">1</span>U.S. comp sales &gt;5% needed to sustain the recovery narrative</li>
+            <li><span class="watch-num">2</span>Transactions &gt;4% would confirm traffic recovery, not just pricing</li>
+            <li><span class="watch-num">3</span>A cut to FY2026 EPS guidance is the clearest red flag</li>
+            <li><span class="watch-num">4</span>Operating margin trajectory needs to clear 10%</li>
+            <li><span class="watch-num">5</span>Listen for Brazil tariff commentary and mitigation plans</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">Risk Register</div>
+    <div class="card" style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Risk</th><th>Probability</th><th>Impact</th><th>Mitigation</th><th>Trend</th></tr></thead>
+        <tbody id="riskTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">Opportunity Screening</div>
+    <div class="grid2">
+      <div class="card">
+        <h4 style="font-size:12px; text-transform:uppercase; color:var(--text-secondary); margin-bottom:12px;">Related Plays</h4>
+        <table>
+          <thead><tr><th>Opportunity</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>Solo Winner Recovery (SBUX)</td><td><span class="badge badge-amber">WAIT $95</span></td></tr>
+            <tr><td>Supplier Play (KDP, JDEP)</td><td><span class="badge badge-green">BUY — lower-risk</span></td></tr>
+            <tr><td>Value Alternative (YUM)</td><td><span class="badge badge-blue">CONSIDER</span></td></tr>
+            <tr><td>Disruptor Threat (Luckin)</td><td><span class="badge badge-red">MONITOR ONLY</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h4 style="font-size:12px; text-transform:uppercase; color:var(--text-secondary); margin-bottom:12px;">Sector Warning</h4>
+        <ul class="checklist">
+          <li><span class="tick" style="color:var(--warning);">⚠️</span>Restaurant industry is in a structural, not cyclical, downturn</li>
+          <li><span class="tick" style="color:var(--bear);">📉</span>Regional restaurant indices down sharply over the trailing period</li>
+          <li><span class="tick" style="color:var(--bear);">📉</span>Profitability compressing across multiple international markets</li>
+          <li><span class="tick" style="color:var(--bear);">📉</span>Global competitive intensity rising, led by low-cost disruptors</li>
+          <li><span class="tick" style="color:var(--accent);">💡</span>This is a stock picker's market — avoid buying the sector broadly</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title">Source Validation</div>
+    <div class="card" style="overflow-x:auto;">
+      <table>
+        <thead><tr><th>Metric</th><th>Source</th><th>Verified</th></tr></thead>
+        <tbody>
+          <tr><td>Q3 Earnings Date</td><td>MarketBeat, Zacks</td><td><span class="badge badge-green">✅</span></td></tr>
+          <tr><td>Q2 EPS $0.50</td><td>SBUX IR, Invezz</td><td><span class="badge badge-green">✅</span></td></tr>
+          <tr><td>Analyst Price Target</td><td>Stock Analysis, S&P Global</td><td><span class="badge badge-green">✅</span></td></tr>
+          <tr><td>Current Price</td><td>Stock Analysis</td><td><span class="badge badge-green">✅</span></td></tr>
+          <tr><td>Altman Z-Score 2.95</td><td>GuruFocus</td><td><span class="badge badge-green">✅</span></td></tr>
+          <tr><td>Payout Ratio 205%</td><td>KoalaGains</td><td><span class="badge badge-green">✅</span></td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px; color:var(--text-secondary); margin-top:12px;">Data current as of July 22, 2026 close. Sample data for demonstration — not investment advice.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">PILLAR9 — Institutional-grade analysis, made readable. Demo data only.</footer>
+
+<script>
+/* ---------------- Sample Data ---------------- */
+const sampleData = {
+  ticker: "SBUX",
+  name: "Starbucks Corp",
+  price: 103.98,
+  change: 0.6,
+  marketCap: "118.5B",
+  fiftyTwoWeekRange: "77.99 - 109.23",
+  trailingPE: 79.98,
+  forwardPE: 38,
+  dividendYield: 2.39,
+  beta: 0.97
+};
+
+/* ---------------- Quick Stats Bar ---------------- */
+function renderQuickStats(d){
+  const el = document.getElementById('quickStats');
+  el.innerHTML = `
+    <div class="quick-stat"><div class="label">Price</div><div class="value">$${d.price.toFixed(2)}</div></div>
+    <div class="quick-stat"><div class="label">Chg</div><div class="value ${d.change>=0?'up':'down'}">${d.change>=0?'▲':'▼'} ${Math.abs(d.change)}%</div></div>
+    <div class="quick-stat"><div class="label">Mkt Cap</div><div class="value">$${d.marketCap}</div></div>
+    <div class="quick-stat"><div class="label">P/E</div><div class="value">${d.trailingPE}x</div></div>
+  `;
+}
+renderQuickStats(sampleData);
+
+document.getElementById('tickerForm').addEventListener('submit', function(e){
+  e.preventDefault();
+  const val = document.getElementById('tickerInput').value.trim().toUpperCase() || 'SBUX';
+  const d = {...sampleData, ticker: val};
+  renderQuickStats(d);
+  // In production this would trigger a real API fetch + re-render of the whole dashboard.
+  document.querySelector('.company-name').innerHTML = `${val === 'SBUX' ? 'Starbucks Corp' : val + ' (sample placeholder)'} <span style="color:var(--text-secondary); font-weight:400; font-size:16px;">${val}</span>`;
+});
+
+/* ---------------- Pillars Data & Render ---------------- */
+const pillars = [
+  {
+    title: "Business Quality & Moat",
+    chip: "Wide moat · A-grade business",
+    body: `
+      <div class="grid2">
+        <div class="sub-card">
+          <h4>Moat Score</h4>
+          <div class="gauge-box">
+            <svg width="160" height="100" viewBox="0 0 180 110">
+              <path d="M20,100 A70,70 0 0,1 160,100" fill="none" stroke="var(--border)" stroke-width="16" stroke-linecap="round"/>
+              <path class="anim-arc" data-pct="0.9" data-color="var(--bull)" d="M20,100 A70,70 0 0,1 160,100" fill="none" stroke="var(--bull)" stroke-width="16" stroke-linecap="round" stroke-dasharray="220" stroke-dashoffset="220"/>
+            </svg>
+            <div class="gauge-value" style="color:var(--bull);">WIDE</div>
+          </div>
+        </div>
+        <div class="sub-card">
+          <h4>Key Metrics</h4>
+          <table>
+            <tbody>
+              <tr><td>Market Cap</td><td style="text-align:right; font-family:'JetBrains Mono',monospace;">$118.5B</td></tr>
+              <tr><td>52W Range</td><td style="text-align:right; font-family:'JetBrains Mono',monospace;">$77.99–$109.23</td></tr>
+              <tr><td>Trailing P/E</td><td style="text-align:right; font-family:'JetBrains Mono',monospace;">79.98x</td></tr>
+              <tr><td>Forward P/E</td><td style="text-align:right; font-family:'JetBrains Mono',monospace;">~38x</td></tr>
+              <tr><td>Dividend Yield</td><td style="text-align:right; font-family:'JetBrains Mono',monospace;">2.39%</td></tr>
+              <tr><td>Beta</td><td style="text-align:right; font-family:'JetBrains Mono',monospace;">0.97</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>Moat Sources</h4>
+        <ul class="checklist">
+          <li><span class="tick">✅</span>Iconic global brand — 41,129 stores across 80+ countries</li>
+          <li><span class="tick">✅</span>Locked-in customer base — 35.6M Rewards members</li>
+          <li><span class="tick">✅</span>Premium positioning — gross margin 67–69%</li>
+          <li><span class="tick">✅</span>"Third place" ecosystem drives high differentiation</li>
+        </ul>
+      </div>
+      <div class="verdict-line">VERDICT: A-grade business with a wide, durable moat.</div>
+    `
+  },
+  {
+    title: "Industry & Macro Structure",
+    chip: "Solo winner — not a rising tide",
+    body: `
+      <div class="sub-card">
+        <h4>Solo Winner Alert</h4>
+        <div class="progress-row">
+          <div class="plabel"><span>SBUX 6-Month</span><span class="up">+0.2%</span></div>
+          <div class="progress-track"><div class="progress-fill anim-bar" data-pct="55" style="background:var(--bull);"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="plabel"><span>Industry Average</span><span class="down">-11.2%</span></div>
+          <div class="progress-track"><div class="progress-fill anim-bar" data-pct="20" style="background:var(--bear);"></div></div>
+        </div>
+        <p style="font-size:12px; color:var(--warning); margin-top:6px;">⚠️ This is a solo-winner story, not a rising tide for the sector.</p>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>Competitor Performance</h4>
+        <table>
+          <thead><tr><th>Competitor</th><th>Ticker</th><th>1-Year</th></tr></thead>
+          <tbody>
+            <tr><td>Starbucks</td><td>SBUX</td><td class="up">+16.4% ▲</td></tr>
+            <tr><td>Dutch Bros</td><td>BROS</td><td class="up">+5.9% ▲</td></tr>
+            <tr><td>McDonald's</td><td>MCD</td><td class="down">-7.3% ▼</td></tr>
+            <tr><td>Luckin Coffee</td><td>LKNCY</td><td class="up">+132% (5Y) 🚀</td></tr>
+            <tr><td>Industry Avg</td><td>—</td><td class="down">-11.2% (6M) ▼</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>Industry Headwinds</h4>
+        <ul class="checklist">
+          <li><span class="badge badge-red">🔴</span>Elevated coffee pricing — 10–15% of COGS</li>
+          <li><span class="badge badge-red">🔴</span>Consumer value sensitivity — McCafé threat</li>
+          <li><span class="badge badge-amber">🟡</span>Labor investments pressuring margins</li>
+          <li><span class="badge badge-amber">🟡</span>Geopolitical volatility in packaging & transport</li>
+        </ul>
+      </div>
+      <div class="verdict-line">VERDICT: Consumer environment mixed; SBUX is winning largely alone.</div>
+    `
+  },
+  {
+    title: "Supply Chain & Ecosystem",
+    chip: "No single point of failure",
+    body: `
+      <div class="sub-card">
+        <h4>Ecosystem Dependency Map</h4>
+        <svg class="ecosystem-svg" viewBox="0 0 640 160">
+          <defs>
+            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="var(--accent)"/></marker>
+          </defs>
+          <g font-family="Inter" font-size="13" fill="var(--text)">
+            <rect x="10" y="15" width="120" height="40" rx="8" fill="rgba(68,136,255,0.12)" stroke="var(--accent)"/>
+            <text x="70" y="40" text-anchor="middle">Farmers</text>
+            <rect x="260" y="15" width="120" height="40" rx="8" fill="rgba(0,200,83,0.12)" stroke="var(--bull)"/>
+            <text x="320" y="40" text-anchor="middle">Starbucks</text>
+            <rect x="510" y="15" width="120" height="40" rx="8" fill="rgba(255,171,0,0.12)" stroke="var(--neutral)"/>
+            <text x="570" y="40" text-anchor="middle">Consumers</text>
+            <rect x="10" y="100" width="120" height="40" rx="8" fill="rgba(255,255,255,0.05)" stroke="var(--border)"/>
+            <text x="70" y="125" text-anchor="middle">Suppliers</text>
+            <rect x="260" y="100" width="120" height="40" rx="8" fill="rgba(255,255,255,0.05)" stroke="var(--border)"/>
+            <text x="320" y="125" text-anchor="middle">Competitors</text>
+            <rect x="510" y="100" width="120" height="40" rx="8" fill="rgba(255,255,255,0.05)" stroke="var(--border)"/>
+            <text x="570" y="125" text-anchor="middle">Industry</text>
+            <line x1="130" y1="35" x2="255" y2="35" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+            <line x1="380" y1="35" x2="505" y2="35" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+            <line x1="70" y1="55" x2="70" y2="98" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+            <line x1="320" y1="55" x2="320" y2="98" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+            <line x1="570" y1="55" x2="570" y2="98" stroke="var(--border)" stroke-width="2" marker-end="url(#arrow)"/>
+          </g>
+        </svg>
+      </div>
+      <div class="grid2" style="margin-top:14px;">
+        <div class="sub-card">
+          <h4>Key Suppliers</h4>
+          <table>
+            <thead><tr><th>Supplier</th><th>Ticker</th><th>Trend</th></tr></thead>
+            <tbody>
+              <tr><td>Keurig Dr Pepper</td><td>KDP</td><td class="up">Improving ▲</td></tr>
+              <tr><td>JDE Peet's</td><td>JDEP</td><td class="up">Improving ▲</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="sub-card">
+          <h4>Competitor Threat Matrix</h4>
+          <table>
+            <thead><tr><th>Threat</th><th>Growth</th><th>Level</th></tr></thead>
+            <tbody>
+              <tr><td>Luckin</td><td>132% (5Y)</td><td><span class="badge badge-red">HIGH</span></td></tr>
+              <tr><td>Dutch Bros</td><td>30%+ Rev</td><td><span class="badge badge-amber">MEDIUM</span></td></tr>
+              <tr><td>McDonald's</td><td>Stable</td><td><span class="badge badge-amber">MEDIUM</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="verdict-line">VERDICT: No single-point-of-failure risk; key suppliers trending better.</div>
+    `
+  },
+  {
+    title: "Credit & Debt Structure",
+    chip: "Grey zone — watchlist, not distress",
+    body: `
+      <div class="grid2">
+        <div class="sub-card">
+          <h4>Altman Z-Score <span class="tooltip" style="border:none;">ⓘ<span class="tip">A composite score estimating bankruptcy risk. Below 1.8 = distress zone, above 3.0 = safe zone.</span></span></h4>
+          <div class="gauge-value" style="font-size:32px; margin:6px 0;">2.95</div>
+          <div class="progress-track"><div class="progress-fill anim-bar" data-pct="65" style="background:var(--neutral);"></div></div>
+          <p style="font-size:11px; color:var(--text-secondary); margin-top:6px;">Safe zone starts at 3.0+</p>
+        </div>
+        <div class="sub-card">
+          <h4>Credit Health</h4>
+          <span class="badge badge-amber" style="font-size:12px; padding:6px 12px;">⚠️ GREY ZONE</span>
+          <p style="font-size:12px; color:var(--text-secondary); margin-top:10px;">Slight financial stress; low near-term default risk.</p>
+        </div>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>Debt Structure</h4>
+        <div class="mini-metrics">
+          <div class="mini-metric"><div class="label">Total Debt</div><div class="value">$25.5B</div></div>
+          <div class="mini-metric"><div class="label">Interest Coverage</div><div class="value">6.4x</div></div>
+          <div class="mini-metric"><div class="label">Net Debt/EBITDA</div><div class="value">4.1x</div></div>
+          <div class="mini-metric"><div class="label">Current Ratio</div><div class="value">1.05x</div></div>
+        </div>
+        <ul class="checklist" style="margin-top:12px;">
+          <li><span class="tick" style="color:var(--warning);">⚠️</span>Payout ratio at 205% of net income</li>
+          <li><span class="tick" style="color:var(--bear);">📉</span>FY2025 FCF coverage gap of $330M</li>
+          <li><span class="tick" style="color:var(--bull);">📈</span>Q1 FY2026 FCF improving to $1.27B</li>
+        </ul>
+      </div>
+      <div class="verdict-line">VERDICT: Watchlist balance sheet; not currently in distress.</div>
+    `
+  },
+  {
+    title: "Fundamental Trajectory",
+    chip: "Turnaround real; margin recovery is a long road",
+    body: `
+      <div class="sub-card">
+        <h4>Quarterly EPS Trend</h4>
+        <div class="eps-chart" id="epsChart"></div>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>Guidance Summary</h4>
+        <table>
+          <thead><tr><th>Metric</th><th>Original</th><th>Updated</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td>Global Comps</td><td>3%+</td><td>5%+</td><td><span class="badge badge-green">▲ RAISED</span></td></tr>
+            <tr><td>Non-GAAP EPS</td><td>$2.15–2.40</td><td>$2.25–2.45</td><td><span class="badge badge-green">▲ RAISED</span></td></tr>
+            <tr><td>Net New Stores</td><td>600–650</td><td>600–650</td><td><span class="badge badge-blue">↔ HELD</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>Margin Recovery Roadmap</h4>
+        <div class="progress-row">
+          <div class="plabel"><span>FY2024</span><span>14.95%</span></div>
+          <div class="progress-track"><div class="progress-fill anim-bar" data-pct="90" style="background:var(--bull);"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="plabel"><span>FY2025</span><span>7.9%</span></div>
+          <div class="progress-track"><div class="progress-fill anim-bar" data-pct="47" style="background:var(--bear);"></div></div>
+        </div>
+        <div class="progress-row">
+          <div class="plabel"><span>Current</span><span>9.4%</span></div>
+          <div class="progress-track"><div class="progress-fill anim-bar" data-pct="56" style="background:var(--neutral);"></div></div>
+        </div>
+        <p style="font-size:12px; color:var(--text-secondary);">📉 Gap to historical margin: 5–6 percentage points</p>
+      </div>
+      <div class="verdict-line">VERDICT: Turnaround is real; full margin recovery is still a long road.</div>
+    `
+  },
+  {
+    title: "Timing & Catalysts",
+    chip: "July 29 earnings — primary binary event",
+    body: `
+      <div class="sub-card">
+        <h4>Catalyst Calendar</h4>
+        <div class="timeline">
+          <div class="timeline-item"><div class="timeline-date">Jul 29, 2026</div><div class="timeline-content"><div class="event">Q3 Earnings</div><div class="impact"><span class="badge badge-red">🔴 PRIMARY</span></div></div></div>
+          <div class="timeline-item"><div class="timeline-date">Aug 14, 2026</div><div class="timeline-content"><div class="event">Ex-Dividend Date</div><div class="impact"><span class="badge badge-amber">🟡 SECONDARY</span></div></div></div>
+          <div class="timeline-item"><div class="timeline-date">Ongoing</div><div class="timeline-content"><div class="event">China Restructuring</div><div class="impact"><span class="badge badge-amber">🟡 SECONDARY</span></div></div></div>
+        </div>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>Earnings Scorecard</h4>
+        <table>
+          <thead><tr><th>Trigger</th><th>Confirms</th><th>Invalidates</th></tr></thead>
+          <tbody>
+            <tr><td>U.S. Comp Sales</td><td class="up">&gt;7%</td><td class="down">&lt;5%</td></tr>
+            <tr><td>Transactions</td><td class="up">&gt;4%</td><td class="down">Slowing</td></tr>
+            <tr><td>Operating Margin</td><td class="up">&gt;120bps</td><td class="down">Contracting</td></tr>
+            <tr><td>FY2026 Guidance</td><td class="up">Raised/Reaffirmed</td><td class="down">Cut</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="verdict-line">VERDICT: July 29 earnings is the primary binary event to watch.</div>
+    `
+  },
+  {
+    title: "Technicals, Valuation & Risk/Reward",
+    chip: "Extended and expensive — wait for pullback",
+    body: `
+      <div class="grid2">
+        <div class="sub-card">
+          <h4>Technical Snapshot</h4>
+          <div class="mini-metrics">
+            <div class="mini-metric"><div class="label">Current</div><div class="value">$103.98</div></div>
+            <div class="mini-metric"><div class="label">RSI</div><div class="value">62</div></div>
+            <div class="mini-metric"><div class="label">52W High</div><div class="value">$109.23</div></div>
+            <div class="mini-metric"><div class="label">50D MA</div><div class="value">$95.35</div></div>
+            <div class="mini-metric"><div class="label">52W Low</div><div class="value">$77.99</div></div>
+            <div class="mini-metric"><div class="label">200D MA</div><div class="value">$83.39</div></div>
+          </div>
+          <p style="font-size:12px; color:var(--warning); margin-top:10px;">Status: EXTENDED ▲</p>
+        </div>
+        <div class="sub-card">
+          <h4>Valuation vs Peers</h4>
+          <table>
+            <thead><tr><th>Metric</th><th>SBUX</th><th>CMG</th><th>YUM</th><th>DRI</th></tr></thead>
+            <tbody>
+              <tr><td>P/OpInc</td><td>25.1x</td><td>21.1x</td><td>16.7x</td><td>15.1x</td></tr>
+              <tr><td>LTM Growth</td><td class="down">-30.1%</td><td class="up">+2.9%</td><td class="up">+6.9%</td><td class="up">+7.3%</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="verdict-line">VERDICT: Extended and expensive; wait for a pullback toward fair value.</div>
+    `
+  },
+  {
+    title: "Price Reactions to News",
+    chip: "Tape healthy, but stock is extended",
+    body: `
+      <div class="sub-card">
+        <h4>Price Reaction Timeline</h4>
+        <div class="timeline">
+          <div class="timeline-item"><div class="timeline-date">Apr 29, 2026</div><div class="timeline-content"><div class="event">📈 Q2 Earnings Beat</div><div class="impact up">Strong rally</div></div></div>
+          <div class="timeline-item"><div class="timeline-date">May–Jun 2026</div><div class="timeline-content"><div class="event">📰 CEO Niccol Coverage</div><div class="impact">Positive sentiment ↔</div></div></div>
+          <div class="timeline-item"><div class="timeline-date">Jul 2026</div><div class="timeline-content"><div class="event">📊 Technical Consolidation</div><div class="impact">Holding near highs ↔</div></div></div>
+        </div>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>Technical Health Check</h4>
+        <table>
+          <thead><tr><th>Signal</th><th>Status</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>50-day MA break</td><td>Not triggered</td><td>✅</td></tr>
+            <tr><td>Weekly lower lows</td><td>Not triggered</td><td>✅</td></tr>
+            <tr><td>Under-pressure alert</td><td>Not triggered</td><td>✅</td></tr>
+            <tr><td>Failed breakout at $109</td><td>Watch level</td><td>👀</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="verdict-line">VERDICT: Tape confirms fundamentals, but the stock remains extended.</div>
+    `
+  },
+  {
+    title: "Governance, ESG & Portfolio Context",
+    chip: "Robust ESG; low-correlation diversifier",
+    body: `
+      <div class="grid2">
+        <div class="sub-card">
+          <h4>Governance Snapshot</h4>
+          <table>
+            <tbody>
+              <tr><td>CEO</td><td style="text-align:right;">Brian Niccol (Sept 2024)</td></tr>
+              <tr><td>Institutional Ownership</td><td style="text-align:right;">~71.8%</td></tr>
+              <tr><td>Board Structure</td><td style="text-align:right;">Chairman & CEO combined</td></tr>
+              <tr><td>GF Score</td><td style="text-align:right;">84/100</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="sub-card">
+          <h4>Portfolio Context</h4>
+          <table>
+            <tbody>
+              <tr><td>Beta</td><td style="text-align:right;">0.97</td></tr>
+              <tr><td>Correlation to SPY</td><td style="text-align:right;">0.17 (Low)</td></tr>
+              <tr><td>Liquidity (ADV)</td><td style="text-align:right;">7.9M shares</td></tr>
+              <tr><td>Suggested Sizing</td><td style="text-align:right;">3% at $95, 5% at $90</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="sub-card" style="margin-top:14px;">
+        <h4>ESG Metrics</h4>
+        <ul class="checklist">
+          <li><span class="tick">✅</span>SBTi-validated 2030 GHG reduction targets</li>
+          <li><span class="tick">✅</span>Digital carbon management across 100% direct supply chain</li>
+          <li><span class="tick">✅</span>Global Impact Report and CA AB1305 disclosures published</li>
+        </ul>
+      </div>
+      <div class="verdict-line">VERDICT: Robust ESG profile; low market correlation makes it a portfolio diversifier.</div>
+    `
+  }
+];
+
+function renderPillars(){
+  const container = document.getElementById('pillars');
+  container.innerHTML = pillars.map((p, i) => `
+    <div class="pillar" data-index="${i}">
+      <div class="pillar-head" onclick="togglePillar(${i})">
+        <div class="pillar-head-left">
+          <div class="pillar-num">${String(i+1).padStart(2,'0')}</div>
+          <div>
+            <div class="pillar-title">${p.title}</div>
+            <div class="pillar-verdict-chip">${p.chip}</div>
+          </div>
+        </div>
+        <svg class="chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div class="pillar-body"><div class="pillar-body-inner">${p.body}</div></div>
+    </div>
+  `).join('');
+}
+renderPillars();
+
+function togglePillar(i){
+  const el = document.querySelector(`.pillar[data-index="${i}"]`);
+  const body = el.querySelector('.pillar-body');
+  const isOpen = el.classList.contains('open');
+  if(isOpen){
+    el.classList.remove('open');
+    body.style.maxHeight = null;
+  } else {
+    el.classList.add('open');
+    body.style.maxHeight = body.scrollHeight + 'px';
+    animateInternals(el);
+  }
+}
+
+function animateInternals(el){
+  el.querySelectorAll('.anim-bar').forEach(bar => {
+    const pct = bar.getAttribute('data-pct');
+    requestAnimationFrame(()=>{ bar.style.width = pct + '%'; });
+  });
+  el.querySelectorAll('.anim-arc').forEach(arc => {
+    const pct = parseFloat(arc.getAttribute('data-pct'));
+    const offset = 220 - (220 * pct);
+    requestAnimationFrame(()=>{ arc.style.transition = 'stroke-dashoffset 1s cubic-bezier(.16,1,.3,1)'; arc.style.strokeDashoffset = offset; });
+  });
+}
+
+/* Open first pillar by default */
+setTimeout(()=>togglePillar(0), 300);
+
+/* Risk/Reward gauge animate on load */
+window.addEventListener('load', ()=>{
+  const arc = document.getElementById('rrGaugeArc');
+  requestAnimationFrame(()=>{
+    arc.style.transition = 'stroke-dashoffset 1.2s cubic-bezier(.16,1,.3,1)';
+    arc.style.strokeDashoffset = 220 - (220 * 0.45);
+  });
+});
+
+/* EPS chart */
+const epsData = [
+  {q:'Q1 25', v:0.23}, {q:'Q2 25', v:0.41}, {q:'Q3 25', v:0.50},
+  {q:'Q4 25', v:0.61}, {q:'Q1 26', v:0.35}, {q:'Q2 26', v:0.50}
+];
+function renderEpsChart(){
+  const el = document.getElementById('epsChart');
+  if(!el) return;
+  const max = Math.max(...epsData.map(d=>d.v));
+  el.innerHTML = epsData.map(d => `
+    <div class="eps-bar-col">
+      <div class="eps-bar" style="height:${(d.v/max*100)}%;"><span class="val">$${d.v.toFixed(2)}</span></div>
+      <div class="eps-bar-label">${d.q}</div>
+    </div>
+  `).join('');
+}
+// render lazily once pillar 5 (index 4) opens, and also render now for scrollHeight calc
+renderEpsChart();
+
+/* Risk Register */
+const risks = [
+  {risk:"Coffee Prices", prob:"HIGH", impact:"Margin compression", mitigation:"Forward hedging", trend:"🔴"},
+  {risk:"Brazil Tariff", prob:"HIGH", impact:"COGS increase", mitigation:"Sourcing mitigation", trend:"🟡"},
+  {risk:"Supply Chain", prob:"HIGH", impact:"Delivery delays", mitigation:"Nashville distribution hub", trend:"🟡"},
+  {risk:"Cybersecurity", prob:"HIGH", impact:"Reputational", mitigation:"Enhanced safeguards", trend:"🔴"},
+  {risk:"Technical Breakdown", prob:"MEDIUM", impact:"Price momentum", mitigation:"50-day MA watch", trend:"🟡"},
+  {risk:"Dividend", prob:"MEDIUM", impact:"Potential cut", mitigation:"China JV proceeds", trend:"🟡"},
+  {risk:"Recession", prob:"LOW", impact:"Traffic softness", mitigation:"Premium positioning", trend:"🟡"}
+];
+document.getElementById('riskTableBody').innerHTML = risks.map(r => `
+  <tr>
+    <td>${r.risk}</td>
+    <td><span class="badge ${r.prob==='HIGH'?'badge-red':r.prob==='MEDIUM'?'badge-amber':'badge-green'}">${r.prob}</span></td>
+    <td>${r.impact}</td>
+    <td>${r.mitigation}</td>
+    <td>${r.trend}</td>
+  </tr>
+`).join('');
+
+/* Export report */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const lines = [
+    `PILLAR9 STOCK ANALYSIS REPORT — ${sampleData.ticker}`,
+    `Generated: ${new Date().toLocaleString()}`,
+    ``,
+    `VERDICT: WAIT`,
+    `Fair Value: $99-100 | Current: $103.98 (-4% overvalued)`,
+    `Risk/Reward: 1:2.5 (Unfavorable) | Expected Return: -3%`,
+    ``,
+    `ACTION ITEMS:`,
+    `- Trigger to Buy: Q3 EPS > $0.70 AND pullback to $95`,
+    `- Position Sizing: 3% at $95, 5% at $90`,
+    `- Stop-Loss: $83`,
+    `- Thesis Invalidation: U.S. comp sales <5% OR guidance cut`,
+    ``,
+    `WHAT TO WATCH (Jul 29):`,
+    `1. U.S. comp sales >5%`,
+    `2. Transactions >4%`,
+    `3. FY2026 guidance not cut`,
+    `4. Operating margin >10%`,
+    `5. Brazil tariff commentary`,
+  ].join('\n');
+  const blob = new Blob([lines], {type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${sampleData.ticker}_report.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+</script>
+</body>
+</html>
